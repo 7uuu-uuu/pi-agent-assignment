@@ -1,10 +1,18 @@
 # 实践课4：Pi Agent 模型调用与运行流程报告 LiYunyi
 
-- **姓名拼音：** LiYunyi
-- **小组仓库地址：** https://github.com/open-source-slackers/pi-hunnu-2026
-- **本地仓库路径：** `D:\PiAgent-fork\pi-hunnu-2026`
-- **提交编号：** c3cc91632d0a1950fb122605b190233f2aa0006e
----
+## 基本信息
+| 项目 | 内容 |
+|---|---|
+| 姓名 | LiYunyi |
+| GitHub 登录名 | 7uuu-uuu |
+| 所在小组 | 组织：`open-source-slackers` |
+| 小组代码仓库 | <https://github.com/open-source-slackers/pi-hunnu-2026> |
+| 本地仓库目录 | `D:\PiAgent-fork\pi-hunnu-2026` |
+| 本实践所用提交 | `c3cc91632d0a1950fb122605b190233f2aa0006e`（分支 `main`） |
+| 源码版本 | 1.5.2 |
+| 运行入口 | `node .\packages\coding-agent\dist\cli.js` |
+| 本次所用模型 | deepseek-v4-pro |
+| 环境版本 | Node v24.22.3、npm 11.19.1、git 2.55.0 |
 
 ## 一、源码修改
 
@@ -163,6 +171,7 @@ flowchart LR
     Agent -->|携带工具结果的第二轮请求| AI --> Model
     Model -->|最终回答| Agent --> CLI --> User
 ```
+<img width="2070" height="546" alt="image" src="https://github.com/user-attachments/assets/cf43751d-5b25-4c0e-a218-7c78e7da73bd" />
 
 各组件职责：
 
@@ -172,7 +181,16 @@ flowchart LR
 - **远程模型服务**：真正运行大模型、生成回答或工具调用指令的远端 API。
 
 ---
+## 五、遇到的困难与解决办法
 
-## 五、总结
+1. **TUI 界面日志不全**
+界面日志缓冲区很小，会话 B 第一条日志会被覆盖，无法直接在界面看到完整时序。解决方案：使用`cmd /c`把 stderr 重定向输出到日志文件，退出后过滤日志，拿到完整证据。
+2. **PowerShell 原生重定向乱码**
+直接使用`2>>`会被 PowerShell 包装错误信息，产生编码乱码。改用 cmd 完成重定向，拿到干净原始 stderr 日志。
+3. **入口混淆，看不到新增日志**
+一开始习惯性敲全局`pi`，运行的是旧版本代码，没有本次新增日志。必须使用`dist/cli.js`编译产物验证。
+
+
+## 六、总结
 
 通过两行日志对比两次会话可以看出：直接问答不触发工具，仅进行 1 轮模型调用；读取文件时，第一轮模型调用生成工具请求，本地 `read` 工具真正完成文件读取并把结果写回上下文，随后第二轮模型调用携带工具结果得到最终回答。这验证了 Pi Agent 的"请求模型 — 执行工具 — 写回结果 — 再次请求模型"循环：模型只负责推理与决策，本地工具负责与文件系统交互，两者通过消息上下文衔接。
