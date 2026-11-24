@@ -3,7 +3,7 @@
 - **姓名拼音：** LiYunyi
 - **小组仓库地址：** https://github.com/open-source-slackers/pi-hunnu-2026
 - **本地仓库路径：** `D:\PiAgent-fork\pi-hunnu-2026`
-
+- **提交编号：** c3cc91632d0a1950fb122605b190233f2aa0006e
 ---
 
 ## 一、源码修改
