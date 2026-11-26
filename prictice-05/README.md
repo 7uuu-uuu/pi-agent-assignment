@@ -73,24 +73,26 @@ sequenceDiagram
     IM->>IM: resolve getUserInput()
     IM->>Agent: await session.prompt(userInput)
     
-    Note over Agent: Agent.prompt(messages)
+    Note over Agent: Agent.prompt()【agent.ts】调用 runAgentLoop()【agent-loop.ts】跨文件调用
     Agent->>Agent: runAgentLoop(...)
     
     Agent->>Model: streamFunction(model, llmContext)
+    Note over Model: Provider Adapter发起HTTP请求 ↔ 远端大模型API (SSE流式响应)
     Model-->>Agent: 返回 toolCall: read(filePath)
     
     Agent->>ReadTool: 执行 read 工具
-    Note over ReadTool: 采用流式读取 (createReadStream)
+    Note over ReadTool: 底层文件系统调用 createReadStream，流式读取文件
     ReadTool-->>Agent: 返回文件内容 (工具结果加入上下文)
     
-    Agent->>Model: 再次请求模型（携带工具结果）
+    Agent->>Model: 再次请求模型（携带工具调用结果）
+    Note over Model: Provider Adapter发起HTTP请求 ↔ 远端大模型API (SSE流式响应)
     Model-->>Agent: 返回最终文本回复
     
-    Agent->>IM: 触发事件流 (AgentEvent)
-    Note over IM: handleEvent 监听事件
-    IM->>IM: message_update (流式渲染)
-    IM->>IM: message_end (更新最终状态)
-    IM-->>User: 终端显示最终回复内容
+    Agent->>IM: 触发 AgentEvent 事件流
+    Note over IM: handleEvent 监听Agent事件
+    IM->>IM: message_update (流式分段渲染输出)
+    IM->>IM: message_end (会话消息最终状态更新)
+    IM-->>User: 终端展示完整回复
 ```
 
 **源码定位说明**：
@@ -106,23 +108,23 @@ sequenceDiagram
 
 ```mermaid
 graph TD
-    Start((A阶段结束<br/>已读取启动命令)) --> Choice{用户操作}
-
+    Start((A阶段结束<br />已完成read读取，得到启动命令)) --> Choice{用户操作}
+    
     %% 左分支：恢复会话
-    Choice -->|退出并输入 -c| Resume[main.ts 处理 -c 参数<br/>选择最近的会话文件]
-    Resume --> LoadFile[读取 JSONL 会话文件<br/>恢复历史消息]
+    Choice -->|退出Pi，使用 -c / --continue启动| Resume[main.ts解析-c参数<br />加载最近会话JSONL文件]
+    Resume --> LoadFile[读取本地会话文件<br />反序列化恢复全部历史聊天消息]
     LoadFile --> UserInput1[用户输入: 请起草 README 启动说明]
-    UserInput1 --> Context1[拼接上下文: <br/>恢复的历史消息 + 本次提问]
-    Context1 --> Request1[请求模型]
-    Request1 --> Result1[模型能获取 handoff.txt 信息<br/>输出: npm run demo ...]
-
+    UserInput1 --> Context1[发给模型的上下文：<br/>【磁盘恢复全部历史消息】 + 本次用户提问]
+    Context1 --> Request1[发起模型请求]
+    Request1 --> Result1[模型拥有handoff.txt信息<br />输出完整npm启动命令]
+    
     %% 右分支：新建会话
-    Choice -->|输入 /new| NewSession[创建全新会话<br/>聊天历史为空]
-    NewSession --> UserInput2[用户输入: 完全相同的内容]
-    UserInput2 --> Context2[拼接上下文: <br/>仅本次提问]
-    Context2 --> Request2[请求模型]
-    Request2 --> Result2[模型缺失上下文<br/>输出: 无法完成，缺少命令]
-
+    Choice -->|交互输入 /new| NewSession[创建全新会话实例<br />内存聊天历史栈清空]
+    NewSession --> UserInput2[用户输入：完全相同提问]
+    UserInput2 --> Context2[发给模型的上下文：<br/>【仅本次用户提问，无历史记录】]
+    Context2 --> Request2[发起模型请求]
+    Request2 --> Result2[模型缺少历史上下文<br />回复：缺少交接单启动命令，无法完成]
+    
     classDef leftBranch fill:#d4edda,stroke:#28a745;
     classDef rightBranch fill:#f8d7da,stroke:#dc3545;
     class Resume,LoadFile,UserInput1,Context1,Request1,Result1 leftBranch;
