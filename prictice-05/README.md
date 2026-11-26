@@ -94,6 +94,7 @@ sequenceDiagram
     IM->>IM: message_end (会话消息最终状态更新)
     IM-->>User: 终端展示完整回复
 ```
+<img width="1538" height="1326" alt="7e13f643-ab6a-4850-aa9c-6cf42a7e2cc0" src="https://github.com/user-attachments/assets/a730d5c7-1d78-4456-b275-00811f52ccf2" />
 
 **源码定位说明**：
 - **输入入口**：`interactive-mode.ts` 的 `onSubmit` 钩子接收文本，并调用 `session.prompt()`。
@@ -130,6 +131,7 @@ graph TD
     class Resume,LoadFile,UserInput1,Context1,Request1,Result1 leftBranch;
     class NewSession,UserInput2,Context2,Request2,Result2 rightBranch;
 ```
+<img width="714" height="1508" alt="ed55c94a-cc72-4a61-aa88-18d12ac67b7a" src="https://github.com/user-attachments/assets/b5cfcc69-3e96-4866-8a63-dcde0b12862c" />
 
 **图2源码定位说明**：
 - **恢复旧会话 (`-c`)**：由 packages/coding-agent/src/main.ts 解析 --continue 参数，定位并读取 ~/.pi/agent/sessions/*.jsonl 文件。每条对话 entry 均持久化到该文件，恢复时将历史消息与本次提问拼接提交给模型。
